@@ -37,7 +37,7 @@ namespace ModOrganizerHelper.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Default")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string ProfileName {
             get {
                 return ((string)(this["ProfileName"]));

@@ -11,124 +11,55 @@ namespace ModOrganizerHelper
 {
     public class Program
     {
-        private readonly ModOrganizerConfig _ModOrganizerConfig;
-
-        private readonly string _ProfilePath;
-
-        private readonly string _RootDir;
-
-        private Program(string rootDir) {
-            _RootDir = rootDir;
-            _ModOrganizerConfig = new ModOrganizerConfig(Path.Combine(_RootDir, "ModOrganizer.ini"));
-            _ProfilePath = Path.Combine(_RootDir, "profiles", _ModOrganizerConfig.SelectedProfile);
-
-            Console.Write("Selected profile: ");
-            DarkYellow(_ModOrganizerConfig.SelectedProfile);
-            Console.WriteLine();
-            Console.WriteLine();
-            if (Settings.Default.ProfileName != _ModOrganizerConfig.SelectedProfile) {
-                Console.WriteLine("Profile was changed from last run ...");
-                Console.WriteLine();
-                CopyIniFiles();
-                LinkSaves();
-                Settings.Default.ProfileName = _ModOrganizerConfig.SelectedProfile;
-            }
-
-            // list of all mods
-            string[] modList = LoadModList();
-
-            // file relative path -> mod name
-            Dictionary<string, string> fileLinks = ResolveFileLinks(modList);
-
-            // file relative path -> mod name -or- null when link is obsolete
-            Dictionary<string, string> delta = GetFileLinksDelta(fileLinks);
-
-            UpdateLinks(delta);
-
-            Settings.Default.LinkList = string.Join("\r\n", fileLinks.Select(o => o.Key + "|" + o.Value));
-            Settings.Default.Save();
-        }
-
-        private string DocumentsConfigPath { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Fallout4");
+        private static ModOrganizerConfig _modOrganizerConfig;
+        private static string _modOrganizerDataDir;
+        private static string _profilePath;
+        private static string _modOrganizerConfigFile;
 
         public static void Main(string[] args) {
             try {
-                if (args.Length == 0) {
-                    Console.WriteLine("USAGE: ModOrganizerHelper.exe Path");
+                CheckArgs(args);
+                WriteHeader();
+               
+                _modOrganizerConfig = new ModOrganizerConfig(_modOrganizerConfigFile);
+                _profilePath = Path.Combine(_modOrganizerDataDir, "profiles", _modOrganizerConfig.SelectedProfile);
+
+                Console.Write("Selected profile: ");
+                WriteColored(ConsoleColor.Yellow, _modOrganizerConfig.SelectedProfile);
+                Console.WriteLine();
+                Console.WriteLine();
+                if (Settings.Default.ProfileName != _modOrganizerConfig.SelectedProfile) {
+                    Settings.Default.ProfileName = _modOrganizerConfig.SelectedProfile;
+
+                    Console.WriteLine("Profile was changed from last run ...");
                     Console.WriteLine();
-                    Console.WriteLine("  Path: path to mod organizer settings folder (usually at '%LOCALAPPDATA%\\ModOrganizer')");
-                    Console.WriteLine();
-                    return;
+                    CopyIniFiles();
+                    LinkSaveDirectory();
                 }
 
-                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ModOrganizerHelper.Properties.LICENSE")) {
-                    Debug.Assert(stream != null, nameof(stream) + " != null");
-                    using (StreamReader reader = new StreamReader(stream)) {
-                        Console.WriteLine(reader.ReadToEnd());
-                    }
-                }
+                string[] modList = LoadMods();
+                Dictionary<string, string> actualLinks = ResolveFileLinks(modList);
+                Dictionary<string, string> diff = GetFileLinksDiff(actualLinks);
+                UpdateLinks(diff);
 
-                Console.WriteLine(new string('-', 80));
-                Console.WriteLine();
-                Console.WriteLine("This tool will update links in game data folder based on MO modlist ...");
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Make sure NOT to run this tool from MO!");
-                Console.ResetColor();
-                Console.WriteLine("  (otherwise VFS will kick in and all links will be created in override folder)");
-                Console.ResetColor();
-                Console.WriteLine();
-                Console.WriteLine("Press any key to continue ...");
-                Console.ReadKey();
-
-                // ReSharper disable once ObjectCreationAsStatement
-                new Program(args[0]);
-
-                Console.WriteLine();
-                Console.WriteLine();
-                Console.Write("All links upated, now you can start game without running ");
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("ModOrganizer");
-                Console.ResetColor();
-                Console.WriteLine(".");
-                Console.WriteLine();
+                Settings.Default.LinkList = string.Join("\r\n", actualLinks.Select(o => o.Key + "|" + o.Value));
+                Settings.Default.Save();
+                WriteSuccess();
             } catch (Exception ex) {
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("ERROR: " + ex.Message);
-                Console.ResetColor();
-                Console.WriteLine();
-                Console.WriteLine();
+                WriteError(ex);
             } finally {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Press any key to exit ...");
-                Console.ResetColor();
-                Console.ReadKey();
+                WriteFooter();
             }
         }
 
-        private static void DarkCyan(object value) {
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            Console.Write(value);
-            Console.ResetColor();
-        }
-
-        private static void DarkYellow(object value) {
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.Write(value);
-            Console.ResetColor();
-        }
-
-        private void CopyIniFiles() {
+        private static void CopyIniFiles() {
             Console.Write("  Copying ini files ... ");
-            string[] files = {
-                "fallout4.ini",
-                "Fallout4Custom.ini",
-                "fallout4prefs.ini"
-            };
+            string[] files = {"fallout4.ini", "Fallout4Custom.ini", "fallout4prefs.ini"};
+
+            string documentsConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Fallout4");
             foreach (string file in files) {
-                string filePath = Path.Combine(_ProfilePath, file);
-                string destPath = Path.Combine(DocumentsConfigPath, file);
+                string filePath = Path.Combine(_profilePath, file);
+                string destPath = Path.Combine(documentsConfigPath, file);
                 if (File.Exists(destPath)) {
                     File.Delete(destPath);
                 }
@@ -138,11 +69,11 @@ namespace ModOrganizerHelper
                 }
             }
 
-            DarkCyan("done");
+            WriteColored(ConsoleColor.DarkCyan, "done");
             Console.WriteLine();
         }
 
-        private Dictionary<string, string> GetFileLinksDelta(Dictionary<string, string> fileLinks) {
+        private static Dictionary<string, string> GetFileLinksDiff(Dictionary<string, string> fileLinks) {
             Console.WriteLine();
             Console.Write("Resolving file links ... ");
             Dictionary<string, string> prevFileLinks = LoadLinkList();
@@ -174,71 +105,106 @@ namespace ModOrganizerHelper
                 }
             }
 
-            DarkYellow(actual);
+            WriteColored(ConsoleColor.DarkYellow, actual);
             Console.Write(" up to date, ");
-            DarkYellow(insert);
+            WriteColored(ConsoleColor.DarkYellow, insert);
             Console.Write(" new, ");
-            DarkYellow(update);
+            WriteColored(ConsoleColor.DarkYellow, update);
             Console.Write(" changed and ");
-            DarkYellow(delete);
+            WriteColored(ConsoleColor.DarkYellow, delete);
             Console.WriteLine(" deleted links found.");
             return result;
         }
 
-        private void LinkSaves() {
+        private static void CheckArgs(string[] args) {
+            if (args.Length != 0) {
+                _modOrganizerDataDir = args[0];
+                _modOrganizerConfigFile = Path.Combine(_modOrganizerDataDir, "ModOrganizer.ini");
+                if (File.Exists(_modOrganizerConfigFile)) {
+                    return;
+                }
+            }
+
+            Console.WriteLine("USAGE: ModOrganizerHelper.exe Path");
+            Console.WriteLine();
+            Console.WriteLine("  Path: path to mod organizer settings folder (usually at '%LOCALAPPDATA%\\ModOrganizer')");
+            Console.WriteLine("        must have 'ModOrganizer.ini' file.");
+            Console.WriteLine();
+            Environment.Exit(-1);
+        }
+
+        private static void LinkSaveDirectory() {
             Console.Write("  Creating save folder link ... ");
-            string srcDir = Path.Combine(Directory.GetCurrentDirectory(), "Saves", _ModOrganizerConfig.SelectedProfile);
-            string destDir = Path.Combine(DocumentsConfigPath, "Saves");
+            string srcDir = Path.Combine(Directory.GetCurrentDirectory(), "Saves", _modOrganizerConfig.SelectedProfile);
+            string documentsConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Fallout4");
+            string destDir = Path.Combine(documentsConfigPath, "Saves");
             if (Directory.Exists(destDir)) {
                 Directory.Delete(destDir);
             }
 
-            PInvoke.CreateSymbolicLink(destDir, srcDir, PInvoke.SYMBOLIC_LINK_FLAG.Directory);
-            DarkCyan("done");
+            PInvoke.CreateSymbolicLink(destDir, srcDir, PInvoke.SYMBOLIC_LINK_FLAG.DIRECTORY);
+            WriteColored(ConsoleColor.DarkCyan, "done");
             Console.WriteLine();
         }
 
-        private Dictionary<string, string> LoadLinkList() {
+        private static Dictionary<string, string> LoadLinkList() {
             if (string.IsNullOrEmpty(Settings.Default.LinkList)) {
                 return new Dictionary<string, string>();
             }
 
             return Settings.Default.LinkList
-                           .Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
-                           .Select(o => o.Split('|'))
-                           .ToDictionary(o => o[0], o => o[1]);
+                .Split(new[] {Environment.NewLine}, StringSplitOptions.RemoveEmptyEntries)
+                .Select(o => o.Split('|'))
+                .ToDictionary(o => o[0], o => o[1]);
         }
 
-        private string[] LoadModList() {
+        private static string[] LoadMods() {
             Console.WriteLine();
             Console.Write("Loading mod list ... ");
-            string modList = Path.Combine(_ProfilePath, "modlist.txt");
-            string[] result = File.ReadLines(modList, Encoding.UTF8)
-                                  .Where(o => o[0] == '+')
-                                  .Select(o => o.Substring(1))
-                                  .Reverse()
-                                  .ToArray();
+            string modList = Path.Combine(_profilePath, "modlist.txt");
 
-            DarkYellow(modList.Length);
+            if (!File.Exists(modList)) {
+                WriteColored(ConsoleColor.Red, "File 'modlist.txt' was not found in profile directory!");
+                Environment.Exit(-1);
+            }
+
+            IEnumerable<string> lines = File.ReadLines(modList, Encoding.UTF8);
+            int allMods = 0;
+            IList<string> activeMods = new List<string>();
+            foreach (string line in lines) {
+                if (line[0] == '#') {
+                    continue;
+                }
+
+                ++allMods;
+                if (line[0] == '+') {
+                    activeMods.Add(line.Substring(1));
+                }
+            }
+
+            string[] result = activeMods.Reverse().ToArray();
+
+            WriteColored(ConsoleColor.DarkYellow, allMods);
             Console.Write(" mods found out of which ");
-            DarkYellow(result.Length);
+            WriteColored(ConsoleColor.DarkYellow, result.Length);
             Console.WriteLine(" are active.");
+
             return result;
         }
 
-        private Dictionary<string, string> ResolveFileLinks(string[] modList) {
+        private static Dictionary<string, string> ResolveFileLinks(string[] modList) {
             Console.WriteLine();
             Console.WriteLine("Listing files for mods ... ");
             Dictionary<string, string> result = new Dictionary<string, string>();
 
             foreach (string modName in modList) {
                 Console.Write("  ");
-                DarkCyan(modName);
+                WriteColored(ConsoleColor.DarkCyan, modName);
                 Console.Write(" ... ");
-                DarkYellow(0);
+                WriteColored(ConsoleColor.DarkYellow, 0);
                 Console.Write(" files found.");
 
-                string modPath = Path.Combine(_RootDir, "mods", modName);
+                string modPath = Path.Combine(_modOrganizerDataDir, "mods", modName);
                 IEnumerable<string> files = Directory.EnumerateFiles(modPath, "*.*", SearchOption.AllDirectories);
                 int counter = 0;
                 foreach (string file in files) {
@@ -251,9 +217,9 @@ namespace ModOrganizerHelper
 
                     result[relativePath] = modName;
                     Console.Write("\r  ");
-                    DarkCyan(modName);
+                    WriteColored(ConsoleColor.DarkCyan, modName);
                     Console.Write(" ... ");
-                    DarkYellow(++counter);
+                    WriteColored(ConsoleColor.DarkYellow, ++counter);
                     Console.Write(" files found.");
                 }
 
@@ -263,24 +229,24 @@ namespace ModOrganizerHelper
             return result;
         }
 
-        private void UpdateLinks(Dictionary<string, string> delta) {
+        private static void UpdateLinks(Dictionary<string, string> diff) {
             Console.WriteLine();
             Console.Write("Updating file links ... ");
             int counter = 0;
             int prevLen = 0;
-            foreach (KeyValuePair<string, string> item in delta) {
-                int len = $"Updating file links ... {counter} of {delta.Count} ({item.Key}).".Length;
+            foreach (KeyValuePair<string, string> item in diff) {
+                int len = $"Updating file links ... {counter} of {diff.Count} ({item.Key}).".Length;
                 Console.Write("\rUpdating file links ... ");
-                DarkYellow(++counter);
+                WriteColored(ConsoleColor.DarkYellow, ++counter);
                 Console.Write(" of ");
-                DarkYellow(delta.Count);
+                WriteColored(ConsoleColor.DarkYellow, diff.Count);
                 Console.Write(" (");
                 string key = item.Key;
                 if (item.Key.Length > 100) {
                     key = item.Key.Substring(0, 50) + "..." + item.Key.Substring(item.Key.Length - 45);
                 }
 
-                DarkCyan(key);
+                WriteColored(ConsoleColor.DarkCyan, key);
                 Console.Write(").");
                 if (prevLen > len) {
                     Console.Write(new string(' ', prevLen - len + 1));
@@ -288,23 +254,76 @@ namespace ModOrganizerHelper
 
                 prevLen = len;
 
-                string destPath = Path.Combine(_ModOrganizerConfig.GamePath, "Data", item.Key);
+                string destPath = Path.Combine(_modOrganizerConfig.GamePath, "Data", item.Key);
                 if (File.Exists(destPath)) {
                     File.Delete(destPath);
                 }
 
                 if (item.Value != null) {
-                    string srcPath = Path.Combine(_RootDir, "mods", item.Value, item.Key);
-                    string dirPath = Path.GetDirectoryName(srcPath);
+                    string srcPath = Path.Combine(_modOrganizerDataDir, "mods", item.Value, item.Key);
+                    string dirPath = Path.GetDirectoryName(destPath);
                     Debug.Assert(dirPath != null, nameof(dirPath) + " != null");
                     if (!Directory.Exists(dirPath)) {
                         Directory.CreateDirectory(dirPath);
                     }
 
-                    PInvoke.CreateSymbolicLink(destPath, srcPath, PInvoke.SYMBOLIC_LINK_FLAG.File);
+                    PInvoke.CreateHardLink(destPath, srcPath, IntPtr.Zero);
                 }
             }
 
+            Console.Write("Updating file links ... ");
+            WriteColored(ConsoleColor.DarkCyan, "done");
+            Console.Write(new string(' ', prevLen));
+            Console.WriteLine();
+        }
+
+        private static void WriteColored(ConsoleColor color, object value) {
+            Console.ForegroundColor = color;
+            Console.Write(value);
+            Console.ResetColor();
+        }
+
+        private static void WriteError(Exception ex) {
+            Console.WriteLine();
+            WriteColored(ConsoleColor.Red, "ERROR: " + ex.Message);
+            Console.WriteLine();
+            Console.ResetColor();
+            Console.WriteLine();
+            Console.WriteLine();
+        }
+
+        private static void WriteFooter() {
+            WriteColored(ConsoleColor.Yellow, "Press any key to exit ...");
+            Console.WriteLine();
+            Console.ReadKey();
+        }
+
+        private static void WriteHeader() {
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ModOrganizerHelper.Properties.LICENSE")) {
+                Debug.Assert(stream != null, nameof(stream) + " != null");
+                using (StreamReader reader = new StreamReader(stream)) {
+                    Console.WriteLine(reader.ReadToEnd());
+                }
+            }
+
+            Console.WriteLine(new string('-', 80));
+            Console.WriteLine();
+            Console.WriteLine("This tool will update links in Fallout4 data folder based on MO modlist ...");
+            Console.WriteLine();
+            WriteColored(ConsoleColor.Yellow, "Make sure NOT to run this tool from MO!");
+            Console.WriteLine();
+            Console.WriteLine("  (otherwise VFS will kick in and all links will be created in override folder)");
+            Console.WriteLine();
+            Console.WriteLine("Press any key to continue ...");
+            Console.ReadKey();
+        }
+
+        private static void WriteSuccess() {
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.Write("All links upated, now you can start game without running ");
+            WriteColored(ConsoleColor.Yellow, "ModOrganizer");
+            Console.WriteLine(".");
             Console.WriteLine();
         }
     }
