@@ -35,12 +35,14 @@ namespace ModOrganizerHelper
                     Console.WriteLine();
                     CopyIniFiles();
                     LinkSaveDirectory();
+                    UpdatePlugins();
                 }
 
                 string[] modList = LoadMods();
                 Dictionary<string, string> actualLinks = ResolveFileLinks(modList);
                 Dictionary<string, string> diff = GetFileLinksDiff(actualLinks);
                 UpdateLinks(diff);
+                DeleteEmptyDirs();
 
                 Settings.Default.LinkList = string.Join("\r\n", actualLinks.Select(o => o.Key + "|" + o.Value));
                 Settings.Default.Save();
@@ -136,6 +138,11 @@ namespace ModOrganizerHelper
         private static void LinkSaveDirectory() {
             Console.Write("  Creating save folder link ... ");
             string srcDir = Path.Combine(Directory.GetCurrentDirectory(), "Saves", _modOrganizerConfig.SelectedProfile);
+            if (!Directory.Exists(srcDir)) {
+                Console.Write("not found, creating new folder (new profile?) ... ");
+                Directory.CreateDirectory(srcDir);
+            }
+
             string documentsConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Fallout4");
             string destDir = Path.Combine(documentsConfigPath, "Saves");
             if (Directory.Exists(destDir)) {
@@ -271,9 +278,32 @@ namespace ModOrganizerHelper
                 }
             }
 
-            Console.Write("Updating file links ... ");
+            Console.Write("\rUpdating file links ... ");
             WriteColored(ConsoleColor.DarkCyan, "done");
             Console.Write(new string(' ', prevLen));
+            Console.WriteLine();
+        }
+
+        private static void UpdatePlugins() {
+            Console.Write("  Updating plugins.txt ... ");
+
+            string srcPath = Path.Combine(_profilePath, "plugins.txt");
+            string destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fallout4", "plugins.txt");
+
+            string[] dlc = {
+                "*Fallout4.esm",
+                "*DLCWorkshop01.esm",
+                "*DLCWorkshop02.esm",
+                "*DLCWorkshop03.esm",
+                "*DLCCoast.esm",
+                "*DLCRobot.esm",
+                "*DLCNukaWorld.esm",
+            };
+
+            IEnumerable<string> plugins = File.ReadLines(srcPath).Where(o => o[0] != '#' && !dlc.Contains(o));
+            File.WriteAllLines(destPath, plugins);
+
+            WriteColored(ConsoleColor.DarkCyan, "done");
             Console.WriteLine();
         }
 
@@ -325,6 +355,28 @@ namespace ModOrganizerHelper
             WriteColored(ConsoleColor.Yellow, "ModOrganizer");
             Console.WriteLine(".");
             Console.WriteLine();
+        }
+
+        private static void DeleteEmptyDirs() {
+            Console.Write("Removing empty directories ... ");
+            string dataDir = Path.Combine(_modOrganizerConfig.GamePath, "Data");
+
+            void ProcessDirectory(string path) {
+                foreach (string directory in Directory.GetDirectories(path)) {
+                    ProcessDirectory(directory);
+                    if (Directory.GetFiles(directory).Length == 0 && Directory.GetDirectories(directory).Length == 0) {
+                        Console.Write("\rRemoving empty directories ... ");
+                        WriteColored(ConsoleColor.DarkCyan, directory.Substring(dataDir.Length + 1));
+                        Directory.Delete(directory, false);
+                    }
+                }
+            }
+            
+            ProcessDirectory(dataDir);
+
+            Console.Write("\rRemoving empty directories ... ");
+            WriteColored(ConsoleColor.DarkCyan, "done");
+            Console.WriteLine(new string(' ', 100));
         }
     }
 }
