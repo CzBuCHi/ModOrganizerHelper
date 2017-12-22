@@ -26,12 +26,36 @@ namespace ModOrganizerHelper.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string LinkList {
+        public string IniPath {
             get {
-                return ((string)(this["LinkList"]));
+                return ((string)(this["IniPath"]));
             }
             set {
-                this["LinkList"] = value;
+                this["IniPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SavesPath {
+            get {
+                return ((string)(this["SavesPath"]));
+            }
+            set {
+                this["SavesPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Links {
+            get {
+                return ((string)(this["Links"]));
+            }
+            set {
+                this["Links"] = value;
             }
         }
         

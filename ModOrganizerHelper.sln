@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModOrganizerHelper", "ModOrganizerHelper.csproj", "{B6AA5BAD-2153-4393-B21A-619E554738EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModOrganizerHelper", "ModOrganizerHelper.csproj", "{BDBFF70A-C3B1-42EB-88F3-BE86AEFA4E2D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B6AA5BAD-2153-4393-B21A-619E554738EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B6AA5BAD-2153-4393-B21A-619E554738EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B6AA5BAD-2153-4393-B21A-619E554738EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B6AA5BAD-2153-4393-B21A-619E554738EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDBFF70A-C3B1-42EB-88F3-BE86AEFA4E2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDBFF70A-C3B1-42EB-88F3-BE86AEFA4E2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDBFF70A-C3B1-42EB-88F3-BE86AEFA4E2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDBFF70A-C3B1-42EB-88F3-BE86AEFA4E2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {E6889166-B515-4FD8-854B-64DD7F25C159}
+		SolutionGuid = {25F55E43-EFA1-441E-B577-7B476C0373D4}
 	EndGlobalSection
 EndGlobal
