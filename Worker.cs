@@ -34,15 +34,18 @@ namespace ModOrganizerHelper
             UpdateLinks(diff);
             DeleteEmptyDirs();
             SaveLinkList(null);
+            OnLog("done");
         }
 
         public void UpdateLinks() {
+            UpdatePlugins();
             string[] modList = LoadMods();
             Dictionary<string, string> actualLinks = ResolveFileLinks(modList);
             Dictionary<string, string> diff = GetFileLinksDiff(actualLinks);
             UpdateLinks(diff);
             DeleteEmptyDirs();
             SaveLinkList(actualLinks);
+            OnLog("done");
         }
 
         public void ChangeProfile() {
@@ -51,7 +54,7 @@ namespace ModOrganizerHelper
             UpdatePlugins();
         }
 
-        public void UpdatePlugins() {
+        private void UpdatePlugins() {
             OnLog("Updating plugins.txt ... ");
 
             string srcPath = Path.Combine(ProfilePath, "plugins.txt");
