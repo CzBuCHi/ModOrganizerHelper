@@ -97,5 +97,12 @@ namespace ModOrganizerHelper
                 Settings.Default.Save();
             }
         }
+
+        private void buttonSwitchProfile_Click(object sender, EventArgs e)
+        {
+            Height = 415;
+            _log.Clear();
+            Task.Run(() => _worker.SwitchProfile());
+        }
     }
 }

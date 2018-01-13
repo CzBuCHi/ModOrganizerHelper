@@ -48,7 +48,7 @@ namespace ModOrganizerHelper
             OnLog("done");
         }
 
-        public void ChangeProfile() {
+        public void SwitchProfile() {
             LinkSaveDirectory();
             CopyIniFiles();
             UpdatePlugins();

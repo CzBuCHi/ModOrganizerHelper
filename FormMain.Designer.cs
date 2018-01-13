@@ -40,6 +40,7 @@
             this.label4 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
             this.textBoxLog = new System.Windows.Forms.TextBox();
+            this.buttonSwitchProfile = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -173,12 +174,25 @@
             this.textBoxLog.Size = new System.Drawing.Size(490, 200);
             this.textBoxLog.TabIndex = 11;
             // 
+            // buttonSwitchProfile
+            // 
+            this.buttonSwitchProfile.Enabled = false;
+            this.buttonSwitchProfile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.buttonSwitchProfile.Location = new System.Drawing.Point(180, 130);
+            this.buttonSwitchProfile.Name = "buttonSwitchProfile";
+            this.buttonSwitchProfile.Size = new System.Drawing.Size(100, 30);
+            this.buttonSwitchProfile.TabIndex = 12;
+            this.buttonSwitchProfile.Text = "Switch profile";
+            this.buttonSwitchProfile.UseVisualStyleBackColor = true;
+            this.buttonSwitchProfile.Click += new System.EventHandler(this.buttonSwitchProfile_Click);
+            // 
             // FormMain
             // 
             this.AcceptButton = this.buttonUpdate;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(504, 376);
+            this.Controls.Add(this.buttonSwitchProfile);
             this.Controls.Add(this.textBoxLog);
             this.Controls.Add(this.buttonSelectSavePath);
             this.Controls.Add(this.label3);
@@ -214,6 +228,7 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.TextBox textBoxLog;
+        private System.Windows.Forms.Button buttonSwitchProfile;
     }
 }
 
