@@ -38,6 +38,13 @@ namespace ModOrganizerHelper
         }
 
         public void UpdateLinks() {
+            if (Settings.Default.ProfileName != ProfileName) {
+                LinkSaveDirectory();
+                LinkIniFiles();
+                Settings.Default.ProfileName = ProfileName;
+                Settings.Default.Save();
+            }
+
             UpdatePlugins();
             string[] modList = LoadMods();
             Dictionary<string, string> actualLinks = ResolveFileLinks(modList);
@@ -46,12 +53,6 @@ namespace ModOrganizerHelper
             DeleteEmptyDirs();
             SaveLinkList(actualLinks);
             OnLog("done");
-        }
-
-        public void SwitchProfile() {
-            LinkSaveDirectory();
-            CopyIniFiles();
-            UpdatePlugins();
         }
 
         private void UpdatePlugins() {
@@ -74,8 +75,8 @@ namespace ModOrganizerHelper
             File.WriteAllLines(destPath, plugins);
         }
 
-        private void CopyIniFiles() {
-            OnLog("  Copying ini files ... ");
+        private void LinkIniFiles() {
+            OnLog("Linking ini files ... ");
             string[] files = {"fallout4.ini", "Fallout4Custom.ini", "fallout4prefs.ini"};
 
             string documentsConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Fallout4");
@@ -83,11 +84,12 @@ namespace ModOrganizerHelper
                 string filePath = Path.Combine(ProfilePath, file);
                 string destPath = Path.Combine(documentsConfigPath, file);
                 if (File.Exists(destPath)) {
+                    File.SetAttributes(filePath, FileAttributes.Normal);
                     File.Delete(destPath);
                 }
 
                 if (File.Exists(filePath)) {
-                    File.Copy(filePath, destPath);
+                    PInvoke.CreateHardLink(destPath, filePath, IntPtr.Zero);
                 }
             }
         }
@@ -228,7 +230,7 @@ namespace ModOrganizerHelper
                     key = item.Key.Substring(0, 50) + "..." + item.Key.Substring(item.Key.Length - 45);
                 }
 
-                OnLog($"{(item.Value != null ? "Updating": "Deleting")} file link ... {++counter} of {diff.Count} ({key}).", true);
+                OnLog($"{(item.Value != null ? "Updating" : "Deleting")} file link ... {++counter} of {diff.Count} ({key}).", true);
 
                 string destPath = Path.Combine(GamePath, "Data", item.Key);
                 if (File.Exists(destPath)) {

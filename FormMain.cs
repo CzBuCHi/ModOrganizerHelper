@@ -26,6 +26,7 @@ namespace ModOrganizerHelper
             }
 
             _worker = new Worker(iniPath);
+            labelProfile.Text = _worker.ProfileName;
 
             Action updateLog = Debounce(() => {
                 Invoke(new Action(() => {
@@ -46,7 +47,6 @@ namespace ModOrganizerHelper
 
             buttonUpdate.Enabled = true;
             buttonDelete.Enabled = true;
-            comboBoxProfile.DataSource = _worker.Profiles;
         }
 
         private static Action Debounce(Action func, int milliseconds = 300) {
@@ -98,11 +98,14 @@ namespace ModOrganizerHelper
             }
         }
 
-        private void buttonSwitchProfile_Click(object sender, EventArgs e)
-        {
-            Height = 415;
-            _log.Clear();
-            Task.Run(() => _worker.SwitchProfile());
+        private void labelIniPath_DoubleClick(object sender, EventArgs e) {
+            Settings.Default.IniPath = Clipboard.GetText();
+            Settings.Default.Save();
+        }
+
+        private void labelSavesDirectoryPath_DoubleClick(object sender, EventArgs e) {
+            Settings.Default.SavesPath = Clipboard.GetText();
+            Settings.Default.Save();
         }
     }
 }
