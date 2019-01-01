@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
+using System.Threading;
+using System.Windows.Forms;
 using ModOrganizerHelper.Properties;
 
 namespace ModOrganizerHelper
@@ -43,6 +46,7 @@ namespace ModOrganizerHelper
                 LinkIniFiles();
                 Settings.Default.ProfileName = ProfileName;
                 Settings.Default.Save();
+                Thread.Sleep(100);
             }
 
             UpdatePlugins();
@@ -73,6 +77,7 @@ namespace ModOrganizerHelper
 
             IEnumerable<string> plugins = File.ReadLines(srcPath).Where(o => o[0] != '#' && !dlc.Contains(o));
             File.WriteAllLines(destPath, plugins);
+            Thread.Sleep(100);
         }
 
         private void LinkIniFiles() {
@@ -92,6 +97,8 @@ namespace ModOrganizerHelper
                     PInvoke.CreateHardLink(destPath, filePath, IntPtr.Zero);
                 }
             }
+
+            Thread.Sleep(100);
         }
 
         private void LinkSaveDirectory() {
@@ -109,10 +116,12 @@ namespace ModOrganizerHelper
             }
 
             PInvoke.CreateSymbolicLink(destDir, srcDir, PInvoke.SYMBOLIC_LINK_FLAG.DIRECTORY);
+            Thread.Sleep(100);
         }
 
         private void OnLog(string message, bool replace = false) {
             Log?.Invoke(message, replace);
+            Application.DoEvents();
         }
 
         private string[] LoadMods() {
@@ -140,6 +149,7 @@ namespace ModOrganizerHelper
 
             string[] result = activeMods.Reverse().ToArray();
             OnLog($"{allMods} mods found out of which {result.Length} are active.");
+            Thread.Sleep(100);
             return result;
         }
 
@@ -164,8 +174,6 @@ namespace ModOrganizerHelper
             Dictionary<string, string> result = new Dictionary<string, string>();
 
             foreach (string modName in modList) {
-                OnLog($"  {modName} ... 0 file found");
-
                 string modPath = Path.Combine(Settings.Default.IniPath, "mods", modName);
                 IEnumerable<string> files = Directory.EnumerateFiles(modPath, "*.*", SearchOption.AllDirectories);
                 int counter = 0;
@@ -178,10 +186,13 @@ namespace ModOrganizerHelper
                     }
 
                     result[relativePath] = modName;
-                    OnLog($"  {modName} ... {++counter} filed found", true);
+                    ++counter;
                 }
+
+                OnLog($"  {modName} ... {counter} files found", true);
             }
 
+            Thread.Sleep(100);
             return result;
         }
 
@@ -217,20 +228,25 @@ namespace ModOrganizerHelper
             }
 
             OnLog($"{actual} up to date, {insert} new, {update} changed and {delete} deleted links found.");
+            Thread.Sleep(100);
             return result;
         }
 
         private void UpdateLinks(Dictionary<string, string> diff) {
-            Console.WriteLine();
             OnLog("Updating file links ... ");
             int counter = 0;
+            int max = diff.Count - 1;
             foreach (KeyValuePair<string, string> item in diff) {
+                ++counter;
+
                 string key = item.Key;
                 if (item.Key.Length > 100) {
                     key = item.Key.Substring(0, 50) + "..." + item.Key.Substring(item.Key.Length - 45);
                 }
 
-                OnLog($"{(item.Value != null ? "Updating" : "Deleting")} file link ... {++counter} of {diff.Count} ({key}).", true);
+                if (counter % 100 == 0 || counter == max) {
+                    OnLog($"{(item.Value != null ? "Updating" : "Deleting")} file link ... {counter} of {diff.Count} ({key}).", true);
+                }
 
                 string destPath = Path.Combine(GamePath, "Data", item.Key);
                 if (File.Exists(destPath)) {
@@ -248,6 +264,8 @@ namespace ModOrganizerHelper
                     PInvoke.CreateHardLink(destPath, srcPath, IntPtr.Zero);
                 }
             }
+
+            Thread.Sleep(100);
         }
 
         private void DeleteEmptyDirs() {
@@ -265,6 +283,8 @@ namespace ModOrganizerHelper
             }
 
             ProcessDirectory(dataDir);
+
+            Thread.Sleep(100);
         }
     }
 }

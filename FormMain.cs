@@ -65,13 +65,21 @@ namespace ModOrganizerHelper
         private void buttonDelete_Click(object sender, EventArgs e) {
             Height = 415;
             _log.Clear();
-            Task.Run(() => _worker.DeleteAllLinks());
+
+            EnableButtons(false);
+            Task.Run(() => _worker.DeleteAllLinks()).ContinueWith(o => Invoke(new Action(() => { EnableButtons(true); })));
         }
 
         private void buttonUpdate_Click(object sender, EventArgs e) {
             Height = 415;
             _log.Clear();
-            Task.Run(() => _worker.UpdateLinks());
+            EnableButtons(false);
+            Task.Run(() => _worker.UpdateLinks()).ContinueWith(o => Invoke(new Action(() => { EnableButtons(true); })));
+        }
+
+        private void EnableButtons(bool enable) {
+            buttonDelete.Enabled = enable;
+            buttonUpdate.Enabled = enable;
         }
 
         private void buttonFindIni_Click(object sender, EventArgs e) {
