@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -17,17 +16,12 @@ namespace ModOrganizerHelper
 
         private readonly ModOrganizerConfig _config;
 
-        public string[] Profiles = Directory.EnumerateDirectories(Path.Combine(Settings.Default.IniPath, "profiles")).Select(Path.GetFileName).ToArray();
-
         public Worker(string iniPath) {
             _config = new ModOrganizerConfig(iniPath);
         }
-
         public string ProfileName => _config.SelectedProfile;
 
-        public string GamePath => _config.GamePath;
-
-        public string ProfilePath => Path.Combine(Settings.Default.IniPath, "profiles", ProfileName);
+        public string ProfilePath => Path.Combine(_config.ProfilesDirectory, _config.SelectedProfile);
 
         public event LogDelegate Log;
 
@@ -41,10 +35,10 @@ namespace ModOrganizerHelper
         }
 
         public void UpdateLinks() {
-            if (Settings.Default.ProfileName != ProfileName) {
+            if (Settings.Default.ProfileName != _config.SelectedProfile) {
                 LinkSaveDirectory();
                 LinkIniFiles();
-                Settings.Default.ProfileName = ProfileName;
+                Settings.Default.ProfileName = _config.SelectedProfile;
                 Settings.Default.Save();
                 Thread.Sleep(100);
             }
@@ -60,6 +54,7 @@ namespace ModOrganizerHelper
         }
 
         private void UpdatePlugins() {
+            // older version of MO2 has a bug, where plugins.txt includes base game and DLC esm ...
             OnLog("Updating plugins.txt ... ");
 
             string srcPath = Path.Combine(ProfilePath, "plugins.txt");
@@ -102,8 +97,9 @@ namespace ModOrganizerHelper
         }
 
         private void LinkSaveDirectory() {
+            
             OnLog("Creating save folder link ... ");
-            string srcDir = Path.Combine(Directory.GetCurrentDirectory(), "Saves", ProfileName);
+            string srcDir = Path.Combine(Settings.Default.SavesPath, _config.SelectedProfile);
             if (!Directory.Exists(srcDir)) {
                 OnLog("  source directory not found, creating new one (new profile?) ... ");
                 Directory.CreateDirectory(srcDir);
@@ -125,7 +121,7 @@ namespace ModOrganizerHelper
         }
 
         private string[] LoadMods() {
-            OnLog($"Loading mod list for profile {ProfileName} ... ");
+            OnLog($"Loading mod list for profile {_config.SelectedProfile} ... ");
 
             string modList = Path.Combine(ProfilePath, "modlist.txt");
 
@@ -174,7 +170,8 @@ namespace ModOrganizerHelper
             Dictionary<string, string> result = new Dictionary<string, string>();
 
             foreach (string modName in modList) {
-                string modPath = Path.Combine(Settings.Default.IniPath, "mods", modName);
+                
+                string modPath = Path.Combine(_config.ModDirectory, modName);
                 IEnumerable<string> files = Directory.EnumerateFiles(modPath, "*.*", SearchOption.AllDirectories);
                 int counter = 0;
                 foreach (string file in files) {
@@ -244,17 +241,25 @@ namespace ModOrganizerHelper
                     key = item.Key.Substring(0, 50) + "..." + item.Key.Substring(item.Key.Length - 45);
                 }
 
-                if (counter % 100 == 0 || counter == max) {
+                if (counter % 100 == 0 || counter >= max) {
                     OnLog($"{(item.Value != null ? "Updating" : "Deleting")} file link ... {counter} of {diff.Count} ({key}).", true);
                 }
 
-                string destPath = Path.Combine(GamePath, "Data", item.Key);
+                string destPath = Path.Combine(_config.GamePath, "Data", item.Key);
                 if (File.Exists(destPath)) {
-                    File.Delete(destPath);
+                    // .BAK file is backup of vanila game file, that is overriden by a mod ...
+                    if (item.Value != null) {
+                        File.Move(destPath, destPath + ".BAK");
+                    } else {
+                        File.Delete(destPath);
+                        if (File.Exists(destPath + ".BAK")) {
+                            File.Move(destPath + ".BAK", destPath);
+                        }
+                    }
                 }
 
                 if (item.Value != null) {
-                    string srcPath = Path.Combine(Settings.Default.IniPath, "mods", item.Value, item.Key);
+                    string srcPath = Path.Combine(_config.ModDirectory, item.Value, item.Key);
                     string dirPath = Path.GetDirectoryName(destPath);
                     Debug.Assert(dirPath != null, nameof(dirPath) + " != null");
                     if (!Directory.Exists(dirPath)) {
@@ -270,7 +275,7 @@ namespace ModOrganizerHelper
 
         private void DeleteEmptyDirs() {
             OnLog("Removing empty directories ... ");
-            string dataDir = Path.Combine(GamePath, "Data");
+            string dataDir = Path.Combine(_config.GamePath, "Data");
 
             void ProcessDirectory(string path) {
                 foreach (string directory in Directory.GetDirectories(path)) {

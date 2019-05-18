@@ -45,5 +45,11 @@ namespace ModOrganizerHelper
         public string GamePath => _data["General"]["gamePath"];
 
         public string SelectedProfile => _data["General"]["selected_profile"];
+
+        public string BaseDirectory => _data["Settings"]["base_directory"];
+
+        public string ModDirectory => _data["Settings"]["mod_directory"].Replace("%BASE_DIR%", BaseDirectory);
+
+        public string ProfilesDirectory => _data["Settings"]["profiles_directory"].Replace("%BASE_DIR%", BaseDirectory);
     }
 }
